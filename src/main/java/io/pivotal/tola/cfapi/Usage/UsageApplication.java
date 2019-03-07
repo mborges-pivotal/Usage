@@ -2,21 +2,15 @@ package io.pivotal.tola.cfapi.Usage;
 
 import java.util.Arrays;
 
-import org.cloudfoundry.reactor.ConnectionContext;
-import org.cloudfoundry.reactor.DefaultConnectionContext;
-import org.cloudfoundry.reactor.tokenprovider.PasswordGrantTokenProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
-import reactor.core.publisher.Mono;
 
 @SpringBootApplication
 public class UsageApplication {
@@ -30,48 +24,20 @@ public class UsageApplication {
 	@Component
 	class GetToken implements ApplicationRunner {
 
-		private ConnectionContext connectionContext;
-
-		private PasswordGrantTokenProvider tokenProvider;
-
 		@Autowired
 		private FoundationsConfig config;
-		
-		@Autowired
-		public GetToken(PasswordGrantTokenProvider tokenProvider, ConnectionContext connectionContext) {
-			this.tokenProvider = tokenProvider;
-			this.connectionContext = connectionContext;
-		}
 
 		@Override
 		public void run(ApplicationArguments args) throws Exception {
 
-			Mono<String> token = tokenProvider.getToken(connectionContext);
-			LOG.info("Token is {}", token.block());
-
-			String[] foundations = (String[])config.getFoundations().toArray(new String[]{});
+			String[] foundations = (String[])config.getFoundationNames().toArray(new String[]{});
 			LOG.info("Foundation list: {}", Arrays.toString(foundations));
 			for(String name: foundations) {
-				LOG.info("foundation (with password omitted) {} found", config.getFoundation(name));
+				LOG.info("foundation {} token is: {}", name, config.getFoundationToken(name));
 			}
 
 		}
 
-	}
-
-	///////////////////////////////////////////////////////
-	// CF Java API Bean definitions
-	///////////////////////////////////////////////////////
-
-	@Bean
-	DefaultConnectionContext connectionContext(@Value("${cf.apiHost}") String apiHost) {
-		return DefaultConnectionContext.builder().apiHost(apiHost).build();
-	}
-
-	@Bean
-	PasswordGrantTokenProvider tokenProvider(@Value("${cf.username}") String username,
-			@Value("${cf.password}") String password) {
-		return PasswordGrantTokenProvider.builder().password(password).username(username).build();
 	}
 
 }

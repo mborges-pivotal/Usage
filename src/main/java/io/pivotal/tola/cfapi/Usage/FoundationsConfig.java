@@ -1,63 +1,65 @@
 package io.pivotal.tola.cfapi.Usage;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.PostConstruct;
+
+import org.cloudfoundry.reactor.DefaultConnectionContext;
+import org.cloudfoundry.reactor.tokenprovider.PasswordGrantTokenProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import lombok.Builder;
 import lombok.Data;
-import lombok.ToString;
 
 @Component
-@ConfigurationProperties(prefix = "foundations")
+@ConfigurationProperties(prefix = "usage")
 @Data
 public class FoundationsConfig {
 
 	private static final Logger LOG = LoggerFactory.getLogger(FoundationsConfig.class);
 
-	private List<String> names;
-	private Map<String, String> apiHost;
-	private Map<String, String> username;
-	private Map<String, String> password;
+	private List<Foundation> foundations = new ArrayList<>();
+	
+	private Map<String, FoundationConnection> foundationMap = new HashMap<String, FoundationConnection>();
 
-	private Map<String, Foundation> foundations;
+	@PostConstruct
+	public void init() {
 
-	public List<String> getFoundations() {
-		return Collections.unmodifiableList(names);
+	  for(Foundation f: foundations) {
+		DefaultConnectionContext connectionContext = DefaultConnectionContext.builder().apiHost(f.apiHost).skipSslValidation(f.skipSslValidation).build();		  
+		PasswordGrantTokenProvider tokenProvider = PasswordGrantTokenProvider.builder().password(f.password).username(f.username).build();
+		FoundationConnection fc = new FoundationConnection(connectionContext, tokenProvider);
+		foundationMap.put(f.name, fc);
+		LOG.info("Creating foundation {}", f.name);
+	  }
 	}
 
-	public Foundation getFoundation(String name) {
-		if (foundations == null) {
-			buildFoundations();
+	public List<String> getFoundationNames() {
+		return new ArrayList<String>(foundationMap.keySet());
+	}
+
+	public String getFoundationToken(String name) {
+		if (!foundationMap.containsKey(name)) {
+			throw new Error(String.format("Foundation %s doesn't exist", name));
 		}
-		return foundations.get(name);
+		return foundationMap.get(name).getToken();
 	}
 
 	///////////////////////////////////
 
-	private void buildFoundations() {
-		foundations = new HashMap<String, Foundation>();
-		for (String name : names) {
-			LOG.info("Adding '{}' foundation...", name);
-			Foundation f = Foundation.builder().name(name).apiHost(apiHost.get(name)).username(username.get(name)).password(password.get(name)).build();	
-			foundations.put(name, f);
-			LOG.debug("added foudation {}", f);
-		}
-	}
-
 	@Data
-	@Builder
 	public static class Foundation {
 		private String name;
 		private String apiHost;
 		private String username;
-		@ToString.Exclude private String password;
+		private String password;
+		private boolean skipSslValidation;
 
 	}
+
 }
