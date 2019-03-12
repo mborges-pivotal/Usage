@@ -1,4 +1,4 @@
-package io.pivotal.tola.cfapi.Usage;
+package io.pivotal.tola.cfapi.usage;
 
 import java.util.Arrays;
 
@@ -11,6 +11,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.stereotype.Component;
 
+import io.pivotal.tola.cfapi.usage.configuration.SSLValidationDisabler;
+
 
 @SpringBootApplication
 public class UsageApplication {
@@ -18,26 +20,8 @@ public class UsageApplication {
 	private static final Logger LOG = LoggerFactory.getLogger(UsageApplication.class);
 
 	public static void main(String[] args) {
+		SSLValidationDisabler.disableSSLValidation();
 		SpringApplication.run(UsageApplication.class, args);
-	}
-
-	@Component
-	class GetToken implements ApplicationRunner {
-
-		@Autowired
-		private FoundationsConfig config;
-
-		@Override
-		public void run(ApplicationArguments args) throws Exception {
-
-			String[] foundations = (String[])config.getFoundationNames().toArray(new String[]{});
-			LOG.info("Foundation list: {}", Arrays.toString(foundations));
-			for(String name: foundations) {
-				LOG.info("foundation {} token is: {}", name, config.getFoundationToken(name));
-			}
-
-		}
-
-	}
+	}	
 
 }

@@ -1,4 +1,4 @@
-package io.pivotal.tola.cfapi.Usage;
+package io.pivotal.tola.cfapi.usage.configuration;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,6 +7,7 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import org.cloudfoundry.operations.CloudFoundryOperations;
 import org.cloudfoundry.reactor.DefaultConnectionContext;
 import org.cloudfoundry.reactor.tokenprovider.PasswordGrantTokenProvider;
 import org.slf4j.Logger;
@@ -16,6 +17,9 @@ import org.springframework.stereotype.Component;
 
 import lombok.Data;
 
+/**
+ * FoundationsConfig - know how to manage foundation configuration and connections from properties files
+ */
 @Component
 @ConfigurationProperties(prefix = "usage")
 @Data
@@ -43,6 +47,14 @@ public class FoundationsConfig {
 		return new ArrayList<String>(foundationMap.keySet());
 	}
 
+	public String getAppUsageBaseUrl(String name) {
+		return String.format("https://app-usage.%s", getFoundation(name).getSystemDomain());
+	}
+
+	public String getFoundationHostApi(String name) {
+		return getFoundation(name).apiHost;
+	}
+
 	public String getFoundationToken(String name) {
 		if (!foundationMap.containsKey(name)) {
 			throw new Error(String.format("Foundation %s doesn't exist", name));
@@ -50,7 +62,28 @@ public class FoundationsConfig {
 		return foundationMap.get(name).getToken();
 	}
 
+	public CloudFoundryOperations getOperations(String name) {
+		if (!foundationMap.containsKey(name)) {
+			throw new Error(String.format("Foundation %s doesn't exist", name));
+		}
+		return foundationMap.get(name).getCloudFoundryOperations();
+	}
+
 	///////////////////////////////////
+
+	private Foundation getFoundation(String name) {
+		Foundation foundation = null;
+		for(Foundation f: foundations) {
+			if (f.name.equals(name)) {
+				foundation = f;
+				break;
+			}	
+		}
+		if (foundation == null) {
+			throw new Error(String.format("Foundation %s doesn't exist", name));
+		}
+		return foundation;
+	}
 
 	@Data
 	public static class Foundation {
@@ -59,6 +92,10 @@ public class FoundationsConfig {
 		private String username;
 		private String password;
 		private boolean skipSslValidation;
+
+		public String getSystemDomain() {
+			return apiHost.substring(4); // "api."
+		}
 
 	}
 

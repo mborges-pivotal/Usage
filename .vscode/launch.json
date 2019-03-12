@@ -14,7 +14,7 @@
             "type": "java",
             "name": "Debug (Launch)-UsageApplication<Usage>",
             "request": "launch",
-            "mainClass": "io.pivotal.tola.cfapi.Usage.UsageApplication",
+            "mainClass": "io.pivotal.tola.cfapi.usage.UsageApplication",
             "projectName": "Usage"
         }
     ]
